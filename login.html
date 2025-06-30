@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="it">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>Login</title>
+
+        <link rel="stylesheet" href="login.css">
+        <script src="credenziali.js"></script>
+    </head>
+
+    <script>
+        function apriPagina() {
+
+            document.getElementById('FormLogin').addEventListener('submit', async function (e) {
+                e.preventDefault();
+        
+                const usernameLogin = document.getElementById('username').value;
+                const passwordLogin = document.getElementById('password').value;
+
+                const user = utenti.find(u => u.username === usernameLogin);
+
+                if (user && user.password === passwordLogin && user.reparto == "BB") {
+                    localStorage.setItem("username", usernameLogin);
+                    window.location.href="buonoDigitale_BB.html";
+                }
+                else if (user && user.password === passwordLogin && user.reparto == "BF") {
+                    localStorage.setItem("username", usernameLogin);
+                    window.location.href="buonoDigitale_BF.html";
+                }
+                else if (user && user.password === passwordLogin && user.reparto == "ALL"){
+                    localStorage.setItem("username", usernameLogin);
+                    window.location.href="buonoDigitale_ALL.html";
+                }
+                else {
+                    alert('Username o password errati');
+                }
+
+            });
+                       
+        }
+    </script>
+
+    <body>
+        <div class="container">
+            <h1>Login</h1>
+            <form id="FormLogin">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+
+                <p id="MessaggioErrore" style="color:red;"></p>
+
+                <button type="submit" onclick="apriPagina()">Login</button>
+            </form>
+        </div>
+        
+    </body>
+
+</html>

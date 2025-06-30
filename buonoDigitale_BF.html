@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Buono di carico BF</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    #date-selector {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      justify-content: center;
+      font-size: 18px;
+      user-select: none;
+    }
+
+    #date-selector button {
+      font-size: 24px;
+      padding: 4px 10px;
+      cursor: pointer;
+      border: none;
+      background: #eee;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+    #date-selector button:hover {
+      background: #ddd;
+    }
+
+    #selected-date {
+      min-width: 130px;
+      text-align: center;
+      font-weight: bold;
+      user-select: text;
+    }
+
+    .dropdown-wrapper {
+      margin-bottom: 16px;
+      position: relative;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fafafa;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .dropdown-toggle {
+      background-color: white;
+      border-radius: 6px;
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+    }
+
+    .arrow {
+      font-size: 16px;
+      transition: transform 0.3s ease;
+      user-select: none;
+    }
+
+    .dropdown-wrapper.open .arrow {
+      transform: rotate(180deg);
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: relative;
+      background: white;
+      border-radius: 0 0 6px 6px;
+      margin-top: 4px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 10px 14px;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .dropdown-wrapper.open .dropdown-menu {
+      display: block;
+    }
+
+    .dropdown-menu label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dropdown-menu label.checked {
+      font-weight: 600;
+      color: #d3d3d3;
+      text-decoration: line-through;
+    }
+
+    .dropdown-menu label.checked::after {
+      content: " ✓";
+      color: green;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+
+    .dropdown-menu input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .close-button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: none;
+      user-select: none;
+      transition: background-color 0.3s ease;
+    }
+
+    .close-button.active {
+      display: block;
+    }
+    .close-button:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="date-selector">
+    <button id="prev-day">&#9664;</button>
+    <div id="selected-date"></div>
+    <button id="next-day">&#9654;</button>
+  </div>
+
+  <div id="dropdowns"></div>
+
+  <script>
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbyxpSnnFzru7HiJmIQAU7e68solK_jGLZIEx-o4Q1ev1rwcQ9ZW4WrJ_WmASdUKtYv0/exec"; // sostituisci con il tuo URL
+
+    const container = document.getElementById("dropdowns");
+    const dateDisplay = document.getElementById("selected-date");
+    const prevDayBtn = document.getElementById("prev-day");
+    const nextDayBtn = document.getElementById("next-day");
+
+    let currentDate = new Date();
+
+    // Formatta la data in "gg/mm/yyyy"
+    function formatDate(d) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    // Funzioni localStorage per eliminati
+    function getEliminati() {
+      return JSON.parse(localStorage.getItem("eliminati") || "[]");
+    }
+
+    function salvaEliminato(label) {
+      const eliminati = getEliminati();
+      if (!eliminati.includes(label)) {
+        eliminati.push(label);
+        localStorage.setItem("eliminati", JSON.stringify(eliminati));
+      }
+    }
+
+    function isEliminato(label) {
+      return getEliminati().includes(label);
+    }
+
+    // Carica dropdown filtrati per data
+    function loadDropdownsForDate(date) {
+      container.innerHTML = "";
+      dateDisplay.textContent = formatDate(date);
+
+      const isoDate = date.toISOString().split('T')[0];
+
+      fetch(webAppUrl + "?date=" + isoDate)
+        .then(res => res.json())
+        .then(data => {
+          data.forEach(drop => {
+            if (isEliminato(drop.label)) return;
+
+            const wrapper = document.createElement("div");
+            wrapper.className = "dropdown-wrapper";
+
+            const toggle = document.createElement("div");
+            toggle.className = "dropdown-toggle";
+            toggle.innerHTML = `
+              <span class="title">${drop.label}</span>
+              <span class="arrow">\u25BC</span>
+            `;
+
+            const menu = document.createElement("div");
+            menu.className = "dropdown-menu";
+
+            const checkboxes = [];
+
+            drop.options.forEach(option => {
+              const label = document.createElement("label");
+              const checkbox = document.createElement("input");
+              checkbox.type = "checkbox";
+
+              checkbox.addEventListener("change", () => {
+                label.classList.toggle("checked", checkbox.checked);
+                updateCloseButton();
+              });
+
+              label.appendChild(checkbox);
+              label.appendChild(document.createTextNode(option));
+              menu.appendChild(label);
+              checkboxes.push(checkbox);
+            });
+
+            const closeButton = document.createElement("button");
+            closeButton.className = "close-button";
+            closeButton.textContent = "Chiudi";
+
+            closeButton.addEventListener("click", () => {
+              if (checkboxes.every(c => c.checked)) {
+                salvaEliminato(drop.label);
+                wrapper.remove();
+              }
+            });
+
+            function updateCloseButton() {
+              const allChecked = checkboxes.every(c => c.checked);
+              closeButton.classList.toggle("active", allChecked);
+            }
+
+            toggle.addEventListener("click", () => {
+              wrapper.classList.toggle("open");
+            });
+
+            menu.appendChild(closeButton);
+            wrapper.appendChild(toggle);
+            wrapper.appendChild(menu);
+            container.appendChild(wrapper);
+          });
+        })
+        .catch(err => {
+          container.innerHTML = "<p>Errore nel caricamento dei dati.</p>";
+          console.error(err);
+        });
+    }
+
+    prevDayBtn.addEventListener("click", () => {
+      currentDate.setDate(currentDate.getDate() - 1);
+      loadDropdownsForDate(currentDate);
+    });
+
+    nextDayBtn.addEventListener("click", () => {
+      currentDate.setDate(currentDate.getDate() + 1);
+      loadDropdownsForDate(currentDate);
+    });
+
+    // Carica dropdown del giorno corrente all'avvio
+    loadDropdownsForDate(currentDate);
+  </script>
+</body>
+</html>
+
+
+
+<!-- function doGet(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Foglio1");
+  const data = sheet.getDataRange().getValues();
+  const headers = data.shift();
+
+  const requestedDate = e.parameter.date;
+
+  function toISO(str) {
+    const parts = str.split(/[\/\s:]+/);
+    if (parts.length >= 3) {
+      const d = parseInt(parts[0], 10) + 1;
+      const m = parseInt(parts[1], 10) - 1;
+      const y = parseInt(parts[2], 10);
+      return new Date(y, m, d).toISOString().split("T")[0];
+    }
+    const d = new Date(str);
+    return isNaN(d) ? null : d.toISOString().split("T")[0];
+  }
+
+  const dropdowns = [];
+
+  data.forEach(row => {
+    const rowDate = toISO(row[1]);
+    if (requestedDate && rowDate !== requestedDate) return;
+
+    const titolo = [row[0], row[2], row[3]].filter(v => v).join(" - ");
+
+    // Solo BF (col 4, indice 4) e SP (col 6, indice 6)
+    [4, 6].forEach(colIndex => {
+      const cell = row[colIndex];
+      if (!cell || cell.toString().trim() === "") return;
+
+      const raw = cell.toString().split(";").map(x => x.trim()).filter(x => x.length > 0);
+      const options = [];
+
+      for (let i = 0; i < raw.length; i += 5) {
+        options.push(raw.slice(i, i + 5).join(", "));
+      }
+
+      if (options.length > 0) {
+        dropdowns.push({
+          label: `${titolo}`,
+          options: options
+        });
+      }
+    });
+  });
+
+  return ContentService
+    .createTextOutput(JSON.stringify(dropdowns))
+    .setMimeType(ContentService.MimeType.JSON);
+} -->
